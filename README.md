@@ -7,6 +7,7 @@ Följ denna [länk](https://ditt-cv.netlify.app/) om du vill testa funktionerna 
 ## Installation, databas
 APIet använder en mongoDb-databas. För att ansluta till din databas måste environment variables för inloggningsuppgifter lagras hos din valda webbhost. Den här webbtjänsten använder [Atlas/mongoDb](https://www.mongodb.com/atlas) till sin mongoDb server. Webbadress till databasen finns under connections inne i atlas gränssnittet. För att säkerställa att att input-data följde en viss struktur användes mongoose istället för mongoDb för att ansluta till databasen i nodeJs. Mongoose installeras som tillägg i node.js. Föjande schema användes till mongoose för att säkertställa rätt struktur:
 
+```
 const WorkSchema = mongoose.Schema({
     companyName: {
         type: String,
@@ -33,6 +34,7 @@ const WorkSchema = mongoose.Schema({
         required: true
     }
 });
+```
 
 ## Användning
 Nedan finns beskrivet hur man nå APIet på olika vis:
