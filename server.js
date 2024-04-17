@@ -7,18 +7,18 @@ const cors = require('cors');
 //Inställningar för express
 const app = express();
 const port = process.env.PORT;
+const password = process.env.PASSWORD;
 
 //stöd för ta json-format och 
 app.use(express.json());
 app.use(cors());
-
 
 //Lägger till mongoose
 const mongoose = require('mongoose');
 const { type } = require('express/lib/response');
 
 //Ansluter till mongoDB
-mongoose.connect("mongodb://localhost:27017/developer_dt207g").then(() => {
+mongoose.connect(`mongodb+srv://markusv:${password}@clusterfirst.ageoa7j.mongodb.net/?retryWrites=true&w=majority&appName=ClusterFirst`).then(() => {
     console.log("Connected to MongoDB");
 }).catch((error) => {
     console.log("Error connecting to database: " + error);
@@ -26,10 +26,6 @@ mongoose.connect("mongodb://localhost:27017/developer_dt207g").then(() => {
 
 // Skapa ett db-schema
 const WorkSchema = mongoose.Schema({
-    indexId: {
-        type: String,
-        required: false
-    },
     companyName: {
         type: String,
         required: true
@@ -60,18 +56,14 @@ const WorkSchema = mongoose.Schema({
 // Skapa en model
 const WorkExperience = mongoose.model('Work_experience', WorkSchema);
 
-
 //Välkomst meddelande om webbadress/api anropas
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to my CV api!' });
 });
 
-//hämtar data från mySQL server och skickar med det som svart i fetch förfrågan om webbadress/api/cv anropas. Skickar felmeddelande om fel uppstår hos databasen.
+//hämtar data från en mongoDb server och skickar med det som svart i fetch förfrågan om webbadress/api/cv anropas. Skickar felmeddelande om fel uppstår hos databasen.
 app.get('/api/cv', async (req, res) => {
     try {
-
-        //connection.query("SELECT * FROM WORK_EXPERIENCE;", (err, rows) => {
-
         let result = await WorkExperience.find();
         return res.json(result);
 
@@ -80,7 +72,7 @@ app.get('/api/cv', async (req, res) => {
     }
 });
 
-//lägger till data till mySQL servern från post-anropet om webbadress/api/add anropas. Skickar felmeddelande om fel uppstår hos databasen.
+//lägger till data till mongoDb servern med krav att schema workSchema ska följas från post-anropet om webbadress/api/add anropas. Skickar felmeddelande om fel uppstår hos databasen.
 app.post('/api/add', async (req, res) => {
 
     let workExperience1 = {
@@ -106,7 +98,7 @@ app.post('/api/add', async (req, res) => {
         }
         res.status(400).json(error);
     }
-    //Om allt är korrekt körs frågan till mySQL-databasen för att lagre det nya cv
+    //Om allt är korrekt körs frågan till mongoDg-databasen för att lagra det nya cv
     else {
         try {
             await WorkExperience.create(workExperience1);
@@ -118,11 +110,12 @@ app.post('/api/add', async (req, res) => {
 });
 
 
-//Ändrar rader i mySQL-databasen när förfrågan till webbadress/api/edit görs. Skickar felmeddelande om fel uppstår hos databasen.
+//Ändrar rader i mongoDb-databasen när förfrågan till webbadress/api/edit görs. Skickar felmeddelande om fel uppstår hos databasen.
 app.put('/api/edit', async(req, res) => {
 
+    let indexId = req.body.indexId;
+
     let workExperience1 = {
-        indexId: req.body.indexId,
         companyName: req.body.companyName,
         jobTitle: req.body.jobTitle,
         location: req.body.location,
@@ -140,46 +133,44 @@ app.put('/api/edit', async(req, res) => {
         }
     }
 
-    //Felhantering om uppgifter saknas.
+    //Felhantering om _id saknas.
     if (!indexId) {
         res.status(400).json(error);
     }
-    else if (!companyName || !jobTitle || !location || !startDate || !endDate || !description) {
+    //Det räckar att ett värde uppdateras
+    else if (!workExperience1.companyName && !workExperience1.jobTitle && !workExperience1.location && !workExperience1.startDate && !workExperience1.endDate && !workExperience1.description) {
         res.status(400).json(error);
     }
     //värdet skrivs in på rätt index i rätt kolomn i databasen.
     else {
         try {
-            await WorkExperience.create(workExperience1);
-            return res.status(200).json({ Success: "Put data updated in database." });
+            await WorkExperience.findByIdAndUpdate(indexId, workExperience1);
+            return res.status(200).json({ Success: "Put data updated in database."});
         } catch (error) {
             return res.status(500).json({ error: "Database error. " + error });
         }
     }
 });
 
-//tar bort data från mySQL server när förfrågan till webbadress/api/cv görs. Skickar felmeddelande om fel uppstår hos databasen.
+//tar bort data från mongoDb-servern när förfrågan till webbadress/api/cv görs. Skickar felmeddelande om fel uppstår hos databasen.
 app.delete('/api/delete/:id', async(req, res) => {
-    let id = req.params.id;
+    let indexId = req.params.id;
 
-    pool.getConnection(function (err, connection) {
-        if (err) throw err; // not connected!
-
-        //Fråga skickas till databasen för att ta bort raden om den finns annars skapas felkod. Felkod skapas av andra databasfel också.
-        connection.query("DELETE FROM WORK_EXPERIENCE WHERE ID=?;", id, (err) => {
-            if (err) {
-                res.status(500).json({ error: "Database error. " + err });
-                throw err;
-            } else {
-                res.json({ Success: "Delete data removed from database." });
-                // släpper databasanslutningen.
-                connection.release();
-                // hanterar fel vid släpp.
-                if (err) throw err;
-            }
-        });
-    });
+    //Felhantering om uppgifter saknas.
+    if (!indexId) {
+        res.status(400).json(error);
+    }
+    //värdet skrivs in på rätt index i rätt kolomn i databasen.
+    else {
+        try {
+            await WorkExperience.findByIdAndDelete(indexId);
+            return res.json({ Success: "Delete data removed from database." });
+        } catch (error) {
+            return res.status(500).json({ error: "Database error. " + error });
+        }
+    }
 });
+
 //Startar servern
 app.listen(port, () => {
     console.log('Server is running on port: ' + port);
