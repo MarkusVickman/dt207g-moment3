@@ -17,7 +17,7 @@ app.use(cors());
 const mongoose = require('mongoose');
 const { type } = require('express/lib/response');
 
-//Ansluter till mongoDB 
+//Ansluter till mongoDB.
 mongoose.connect(`mongodb+srv://markusv:${password}@clusterfirst.ageoa7j.mongodb.net/?retryWrites=true&w=majority&appName=ClusterFirst`).then(() => {
     console.log("Connected to MongoDB");
 }).catch((error) => {
